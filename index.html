@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>GestureApp</title>
+    <style>
+      /* Suggestion styling */
+      #suggestions {
+        margin-top: 10px;
+        font-size: 1rem;
+      }
+      #suggestions span {
+        margin-right: 8px;
+        cursor: pointer;
+        padding: 2px 6px;
+        background: #eef;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body class="light-theme">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">🖐️ GestureApp</a>
+        <button id="themeToggle" class="btn btn-outline-secondary">🌙</button>
+      </div>
+    </nav>
+    <div class="container-fluid py-4">
+      <div class="row g-4">
+        <div class="col-lg-7">
+          <div class="card shadow-sm position-relative">
+            <div id="spinner" class="spinner-overlay">
+              <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <img
+              id="video"
+              src="{{ url_for('video_feed') }}"
+              class="w-100 rounded-top"
+              onload="spinner.style.display='none'"
+              onerror="handleStreamError()"
+            />
+            <div class="card-body">
+              <div class="form-floating">
+                <input
+                  type="range"
+                  class="form-range"
+                  id="sensitivity"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value="{{ initial_conf }}"
+                />
+                <label for="sensitivity"
+                  >Sensitivity:
+                  <span id="sensVal">{{ initial_conf }}</span></label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="card shadow-sm mb-3 p-3">
+            <canvas id="probChart" height="200"></canvas>
+          </div>
+          <div class="accordion" id="rightAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button
+                  class="accordion-button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#historyPanel"
+                >
+                  Recognition History
+                </button>
+              </h2>
+              <div
+                id="historyPanel"
+                class="accordion-collapse collapse show"
+                data-bs-parent="#rightAccordion"
+              >
+                <div class="accordion-body p-0">
+                  <ul
+                    id="historyList"
+                    class="list-group list-group-flush small"
+                  ></ul>
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button
+                  class="accordion-button collapsed"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#builderPanel"
+                >
+                  Sentence Builder
+                </button>
+              </h2>
+              <div
+                id="builderPanel"
+                class="accordion-collapse collapse"
+                data-bs-parent="#rightAccordion"
+              >
+                <div class="accordion-body">
+                  <div
+                    id="sentenceBuilder"
+                    class="border rounded p-2 mb-3"
+                    style="min-height: 60px"
+                  ></div>
+                  <!-- Word suggestions -->
+                  <div id="suggestions">
+                    <strong>Suggestions:</strong> <span id="s-list"></span>
+                  </div>
+                  <button id="speakBtn" class="btn btn-primary me-2">
+                    🔊 Speak
+                  </button>
+                  <button id="backspaceBtn" class="btn btn-warning me-2">
+                    ⌫ Remove
+                  </button>
+                  <button id="clearBtn" class="btn btn-secondary">
+                    ✖ Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script id="class-data" type="application/json">
+      {{ classes|tojson }}
+    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <!-- Suggestion polling script -->
+    <script>
+      const sList = document.getElementById("s-list");
+      const sentenceBuilder = document.getElementById("sentenceBuilder");
+      // Fetch and display suggestions
+      async function fetchSuggestions() {
+        try {
+          const res = await fetch("/suggestions");
+          const data = await res.json();
+          sList.innerHTML = data.suggestions
+            .map((w) => `<span>${w}</span>`)
+            .join("");
+          // Attach click handlers
+          document.querySelectorAll("#s-list span").forEach((span) => {
+            span.onclick = () => {
+              sentenceBuilder.textContent += span.textContent + " ";
+              // Clear suggestions after selection
+              sList.innerHTML = "";
+            };
+          });
+        } catch (e) {
+          console.error("Suggestion fetch error:", e);
+        }
+      }
+      setInterval(fetchSuggestions, 500);
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
